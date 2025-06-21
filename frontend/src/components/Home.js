@@ -1,14 +1,32 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
+import { expansionAPI } from '../services/api';
 import AdminButton from './AdminButton';
 
 const Home = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [expansions, setExpansions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchExpansions = async () => {
+      try {
+        const data = await expansionAPI.getAll();
+        setExpansions(data);
+      } catch (error) {
+        console.error('Error fetching expansions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExpansions();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
@@ -69,7 +87,7 @@ const Home = () => {
               </p>
               <div className="bg-blue-500/20 rounded-lg p-4">
                 <p className="text-blue-300 font-semibold">
-                  Carte trovate: {user?.foundCards?.length || 0}
+                  Carte trovate: {user?.found_cards?.length || 0}
                 </p>
               </div>
             </CardContent>
@@ -111,17 +129,72 @@ const Home = () => {
             <CardContent>
               <div className="grid grid-cols-2 gap-6">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-yellow-400">{user?.foundCards?.length || 0}</p>
+                  <p className="text-3xl font-bold text-yellow-400">{user?.found_cards?.length || 0}</p>
                   <p className="text-white/70">Carte Trovate</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-green-400">3</p>
+                  <p className="text-3xl font-bold text-green-400">{loading ? '...' : expansions.length}</p>
                   <p className="text-white/70">Espansioni</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Quick Expansions Preview */}
+        {!loading && expansions.length > 0 && (
+          <div className="mt-16">
+            <h3 className="text-3xl font-bold text-white text-center mb-8">
+              Espansioni Disponibili
+            </h3>
+            <div className="grid md:grid-cols-3 gap-6">
+              {expansions.slice(0, 3).map((expansion) => (
+                <Card 
+                  key={expansion.id}
+                  className="bg-black/20 border-white/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 cursor-pointer"
+                  onClick={() => navigate('/spacchetta')}
+                >
+                  <CardHeader className="text-center">
+                    <div 
+                      className="w-16 h-20 mx-auto mb-3 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: expansion.color }}
+                    >
+                      {expansion.image ? (
+                        <img 
+                          src={expansion.image} 
+                          alt={expansion.name}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="text-2xl text-white">📦</div>
+                      )}
+                    </div>
+                    <CardTitle className="text-lg text-white">{expansion.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                    <Badge 
+                      className="text-white text-sm"
+                      style={{ backgroundColor: expansion.color }}
+                    >
+                      {expansion.total_cards} carte
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {expansions.length > 3 && (
+              <div className="text-center mt-6">
+                <Button 
+                  onClick={() => navigate('/spacchetta')}
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
+                  Vedi tutte le espansioni
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Floating Elements */}

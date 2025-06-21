@@ -4,17 +4,40 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
-import { mockExpansions, generateRandomCards, saveFoundCards, getLocalUserData } from '../mock/mockData';
+import { expansionAPI, packAPI } from '../services/api';
 import { useToast } from '../hooks/use-toast';
+import AdminButton from './AdminButton';
 
 const Spacchetta = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [expansions, setExpansions] = useState([]);
   const [selectedExpansion, setSelectedExpansion] = useState(null);
   const [isOpening, setIsOpening] = useState(false);
   const [openedCards, setOpenedCards] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchExpansions = async () => {
+      try {
+        const data = await expansionAPI.getAll();
+        setExpansions(data);
+      } catch (error) {
+        console.error('Error fetching expansions:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile caricare le espansioni",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExpansions();
+  }, [toast]);
 
   const handleSelectExpansion = (expansion) => {
     setSelectedExpansion(expansion);
@@ -25,29 +48,40 @@ const Spacchetta = () => {
   const handleOpenPack = async () => {
     setIsOpening(true);
     
-    // Simulazione apertura pacchetto con animazione
-    setTimeout(() => {
-      const newCards = generateRandomCards(selectedExpansion.id);
-      setOpenedCards(newCards);
-      
-      // Salva le carte trovate
-      const cardIds = newCards.map(card => card.id);
-      saveFoundCards(cardIds);
-      
-      // Conta le nuove carte uniche
-      const userData = getLocalUserData();
-      const newUniqueCards = cardIds.filter(id => !userData.foundCards.includes(id));
-      
+    try {
+      // Simulazione apertura pacchetto con animazione
+      setTimeout(async () => {
+        try {
+          const result = await packAPI.open(selectedExpansion.id);
+          setOpenedCards(result.cards);
+          
+          setIsOpening(false);
+          setShowResults(true);
+          
+          toast({
+            title: "Pacchetto aperto!",
+            description: result.new_unique_cards.length > 0 
+              ? `Hai trovato ${result.new_unique_cards.length} nuove carte uniche!` 
+              : "Tutte carte già in collezione, ma sempre belle da vedere!",
+          });
+        } catch (error) {
+          console.error('Error opening pack:', error);
+          setIsOpening(false);
+          toast({
+            title: "Errore",
+            description: "Impossibile aprire il pacchetto",
+            variant: "destructive",
+          });
+        }
+      }, 2000);
+    } catch (error) {
       setIsOpening(false);
-      setShowResults(true);
-      
       toast({
-        title: "Pacchetto aperto!",
-        description: newUniqueCards.length > 0 
-          ? `Hai trovato ${newUniqueCards.length} nuove carte uniche!` 
-          : "Tutte carte già in collezione, ma sempre belle da vedere!",
+        title: "Errore",
+        description: "Impossibile aprire il pacchetto",
+        variant: "destructive",
       });
-    }, 2000);
+    }
   };
 
   const CardRevealAnimation = ({ card, index }) => (
@@ -79,6 +113,14 @@ const Spacchetta = () => {
     </Card>
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-900 via-red-900 to-pink-900 flex items-center justify-center">
+        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-white rounded-full"></div>
+      </div>
+    );
+  }
+
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-900 via-orange-900 to-red-900">
@@ -89,13 +131,16 @@ const Spacchetta = () => {
                 Pacchetto Aperto! 🎉
               </h1>
             </div>
-            <Button 
-              onClick={() => navigate('/')}
-              variant="outline"
-              className="border-white/30 text-white hover:bg-white/10"
-            >
-              Home
-            </Button>
+            <div className="flex items-center space-x-2">
+              <AdminButton />
+              <Button 
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                Home
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -168,13 +213,16 @@ const Spacchetta = () => {
                 {selectedExpansion.name}
               </h1>
             </div>
-            <Button 
-              onClick={() => navigate('/')}
-              variant="outline"
-              className="border-white/30 text-white hover:bg-white/10"
-            >
-              Home
-            </Button>
+            <div className="flex items-center space-x-2">
+              <AdminButton />
+              <Button 
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                Home
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -182,14 +230,18 @@ const Spacchetta = () => {
           <div className="max-w-2xl mx-auto text-center">
             <div className="mb-8">
               <div 
-                className="w-48 h-64 mx-auto mb-6 rounded-xl shadow-2xl transform transition-all duration-300 hover:scale-105"
+                className="w-48 h-64 mx-auto mb-6 rounded-xl shadow-2xl transform transition-all duration-300 hover:scale-105 flex items-center justify-center"
                 style={{ backgroundColor: selectedExpansion.color }}
               >
-                <img 
-                  src={selectedExpansion.image} 
-                  alt={selectedExpansion.name}
-                  className="w-full h-full object-cover rounded-xl"
-                />
+                {selectedExpansion.image ? (
+                  <img 
+                    src={selectedExpansion.image} 
+                    alt={selectedExpansion.name}
+                    className="w-full h-full object-cover rounded-xl"
+                  />
+                ) : (
+                  <div className="text-6xl text-white">📦</div>
+                )}
               </div>
               <h2 className="text-4xl font-bold text-white mb-4">
                 Pacchetto {selectedExpansion.name}
@@ -235,7 +287,7 @@ const Spacchetta = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm text-white/60">
                   <div className="bg-white/5 rounded-lg p-4">
                     <p className="font-semibold mb-1">Carte totali:</p>
-                    <p>{selectedExpansion.totalCards}</p>
+                    <p>{selectedExpansion.total_cards}</p>
                   </div>
                   <div className="bg-white/5 rounded-lg p-4">
                     <p className="font-semibold mb-1">Probabilità:</p>
@@ -262,7 +314,8 @@ const Spacchetta = () => {
               {user?.nickname}
             </Badge>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <AdminButton />
             <Button 
               onClick={() => navigate('/')}
               variant="outline"
@@ -291,52 +344,72 @@ const Spacchetta = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockExpansions.map((expansion) => (
-            <Card 
-              key={expansion.id}
-              className="bg-gradient-to-br from-black/40 to-black/20 border-white/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 cursor-pointer group"
-              onClick={() => handleSelectExpansion(expansion)}
-            >
-              <CardHeader className="text-center">
-                <div 
-                  className="w-32 h-40 mx-auto mb-4 rounded-lg overflow-hidden transform transition-all duration-300 group-hover:rotate-3 shadow-xl"
-                  style={{ backgroundColor: expansion.color }}
-                >
-                  <img 
-                    src={expansion.image} 
-                    alt={expansion.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <CardTitle className="text-2xl text-white mb-2">
-                  {expansion.name}
-                </CardTitle>
-                <CardDescription className="text-white/70 text-lg">
-                  {expansion.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center">
-                <div className="space-y-4">
-                  <Badge 
-                    className="text-lg px-4 py-2 text-white"
-                    style={{ backgroundColor: expansion.color }}
-                  >
-                    5 carte per pacchetto
-                  </Badge>
-                  <p className="text-white/60">
-                    {expansion.totalCards} carte totali disponibili
-                  </p>
-                  <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg p-4">
-                    <p className="text-yellow-300 font-semibold text-sm">
-                      ✨ Clicca per aprire un pacchetto!
-                    </p>
-                  </div>
-                </div>
+        {expansions.length === 0 ? (
+          <div className="text-center">
+            <Card className="bg-black/20 border-white/10 backdrop-blur-sm max-w-md mx-auto">
+              <CardContent className="p-8">
+                <div className="text-6xl mb-4">📭</div>
+                <h3 className="text-2xl font-bold text-white mb-4">
+                  Nessuna espansione disponibile
+                </h3>
+                <p className="text-white/70">
+                  Contatta un amministratore per aggiungere nuove espansioni!
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {expansions.map((expansion) => (
+              <Card 
+                key={expansion.id}
+                className="bg-gradient-to-br from-black/40 to-black/20 border-white/10 backdrop-blur-sm transform transition-all duration-300 hover:scale-105 cursor-pointer group"
+                onClick={() => handleSelectExpansion(expansion)}
+              >
+                <CardHeader className="text-center">
+                  <div 
+                    className="w-32 h-40 mx-auto mb-4 rounded-lg overflow-hidden transform transition-all duration-300 group-hover:rotate-3 shadow-xl flex items-center justify-center"
+                    style={{ backgroundColor: expansion.color }}
+                  >
+                    {expansion.image ? (
+                      <img 
+                        src={expansion.image} 
+                        alt={expansion.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-4xl text-white">📦</div>
+                    )}
+                  </div>
+                  <CardTitle className="text-2xl text-white mb-2">
+                    {expansion.name}
+                  </CardTitle>
+                  <CardDescription className="text-white/70 text-lg">
+                    {expansion.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                  <div className="space-y-4">
+                    <Badge 
+                      className="text-lg px-4 py-2 text-white"
+                      style={{ backgroundColor: expansion.color }}
+                    >
+                      5 carte per pacchetto
+                    </Badge>
+                    <p className="text-white/60">
+                      {expansion.total_cards} carte totali disponibili
+                    </p>
+                    <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg p-4">
+                      <p className="text-yellow-300 font-semibold text-sm">
+                        ✨ Clicca per aprire un pacchetto!
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Info Section */}
         <div className="mt-16">
