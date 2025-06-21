@@ -11,14 +11,14 @@ import random
 from datetime import timedelta
 
 # Import our models and auth
-from .models import (
+from models import (
     User, UserCreate, UserLogin, UserResponse, LoginResponse,
     Expansion, ExpansionCreate, ExpansionUpdate,
     Card, CardCreate, CardUpdate,
     OpenPackRequest, OpenPackResponse,
     AdminUserUpdate
 )
-from .auth import (
+from auth import (
     get_password_hash, verify_password, create_access_token,
     get_current_user, get_current_admin_user, user_to_response,
     ACCESS_TOKEN_EXPIRE_MINUTES
