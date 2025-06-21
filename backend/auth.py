@@ -34,7 +34,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: AsyncIOMotorClient = None):
     if db is None:
-        from .server import db
+        from server import db
     
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
