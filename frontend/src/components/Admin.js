@@ -5,26 +5,22 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/use-toast';
-import { mockExpansions, mockCards } from '../mock/mockData';
+import { expansionAPI, cardAPI, adminAPI } from '../services/api';
 
 const Admin = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  const [expansions, setExpansions] = useState(mockExpansions);
-  const [cards, setCards] = useState(mockCards);
-  const [users, setUsers] = useState([
-    { id: 1, email: 'admin@example.com', nickname: 'Admin', isAdmin: true },
-    { id: 2, email: 'user@example.com', nickname: 'User1', isAdmin: false },
-    { id: 3, email: 'test@example.com', nickname: 'TestUser', isAdmin: false }
-  ]);
+  const [expansions, setExpansions] = useState([]);
+  const [cards, setCards] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Form states
   const [expansionForm, setExpansionForm] = useState({
@@ -34,14 +30,14 @@ const Admin = () => {
   });
   const [cardForm, setCardForm] = useState({
     name: '',
-    expansionId: '',
-    image: null
+    expansion_id: '',
+    image: ''
   });
   const [editingExpansion, setEditingExpansion] = useState(null);
   const [editingCard, setEditingCard] = useState(null);
 
   // Check if user is admin
-  const isAdmin = user?.isAdmin || user?.email === 'admin@example.com';
+  const isAdmin = user?.is_admin;
 
   useEffect(() => {
     if (!isAdmin) {
@@ -51,50 +47,86 @@ const Admin = () => {
         variant: "destructive",
       });
       navigate('/');
+      return;
     }
+
+    const fetchData = async () => {
+      try {
+        const [expansionsData, cardsData, usersData] = await Promise.all([
+          expansionAPI.getAll(),
+          cardAPI.getAll(),
+          adminAPI.getUsers()
+        ]);
+        setExpansions(expansionsData);
+        setCards(cardsData);
+        setUsers(usersData);
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+        toast({
+          title: "Errore",
+          description: "Impossibile caricare i dati",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [isAdmin, navigate, toast]);
 
   if (!isAdmin) {
     return null;
   }
 
-  const handleExpansionSubmit = (e) => {
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 flex items-center justify-center">
+        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-white rounded-full"></div>
+      </div>
+    );
+  }
+
+  const handleExpansionSubmit = async (e) => {
     e.preventDefault();
     
-    if (editingExpansion) {
-      // Update existing expansion
-      setExpansions(expansions.map(exp => 
-        exp.id === editingExpansion.id 
-          ? { ...exp, ...expansionForm }
-          : exp
-      ));
-      setEditingExpansion(null);
+    try {
+      if (editingExpansion) {
+        // Update existing expansion
+        const updated = await expansionAPI.update(editingExpansion.id, expansionForm);
+        setExpansions(expansions.map(exp => 
+          exp.id === editingExpansion.id ? updated : exp
+        ));
+        setEditingExpansion(null);
+        toast({
+          title: "Espansione aggiornata",
+          description: `${expansionForm.name} è stata aggiornata con successo`,
+        });
+      } else {
+        // Create new expansion
+        const newExpansion = await expansionAPI.create(expansionForm);
+        setExpansions([...expansions, newExpansion]);
+        toast({
+          title: "Espansione creata",
+          description: `${expansionForm.name} è stata creata con successo`,
+        });
+      }
+      
+      setExpansionForm({ name: '', description: '', color: '#3b82f6' });
+    } catch (error) {
+      console.error('Error with expansion:', error);
       toast({
-        title: "Espansione aggiornata",
-        description: `${expansionForm.name} è stata aggiornata con successo`,
-      });
-    } else {
-      // Create new expansion
-      const newExpansion = {
-        id: Date.now(),
-        ...expansionForm,
-        totalCards: 0,
-        image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiByeD0iMTAiIGZpbGw9InVybCgjZ3JhZGllbnQpIi8+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWRpZW50IiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzNiODJmNiIvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiM2MzY2ZjEiLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8L3N2Zz4K"
-      };
-      setExpansions([...expansions, newExpansion]);
-      toast({
-        title: "Espansione creata",
-        description: `${expansionForm.name} è stata creata con successo`,
+        title: "Errore",
+        description: error.response?.data?.detail || "Errore durante l'operazione",
+        variant: "destructive",
       });
     }
-    
-    setExpansionForm({ name: '', description: '', color: '#3b82f6' });
   };
 
-  const handleCardSubmit = (e) => {
+  const handleCardSubmit = async (e) => {
     e.preventDefault();
     
-    if (!cardForm.expansionId) {
+    if (!cardForm.expansion_id) {
       toast({
         title: "Errore",
         description: "Seleziona un'espansione per la carta",
@@ -103,42 +135,53 @@ const Admin = () => {
       return;
     }
 
-    if (editingCard) {
-      // Update existing card
-      setCards(cards.map(card => 
-        card.id === editingCard.id 
-          ? { ...card, name: cardForm.name, expansionId: parseInt(cardForm.expansionId) }
-          : card
-      ));
-      setEditingCard(null);
-      toast({
-        title: "Carta aggiornata",
-        description: `${cardForm.name} è stata aggiornata con successo`,
-      });
-    } else {
-      // Create new card
-      const newCard = {
-        id: Date.now(),
-        name: cardForm.name,
-        expansionId: parseInt(cardForm.expansionId),
-        image: cardForm.image || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiByeD0iMTAiIGZpbGw9IiNmM2Y0ZjYiLz4KPHN2ZyB4PSI1MCIgeT0iODAiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjMwIiBmaWxsPSIjZTVlN2ViIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOWNhM2FmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4/PC90ZXh0Pgo8L3N2Zz4KPC9zdmc+"
-      };
-      setCards([...cards, newCard]);
+    try {
+      if (editingCard) {
+        // Update existing card
+        const updated = await cardAPI.update(editingCard.id, {
+          name: cardForm.name,
+          expansion_id: cardForm.expansion_id,
+          ...(cardForm.image && { image: cardForm.image })
+        });
+        setCards(cards.map(card => 
+          card.id === editingCard.id ? updated : card
+        ));
+        setEditingCard(null);
+        toast({
+          title: "Carta aggiornata",
+          description: `${cardForm.name} è stata aggiornata con successo`,
+        });
+      } else {
+        // Create new card
+        const newCard = await cardAPI.create({
+          name: cardForm.name,
+          expansion_id: cardForm.expansion_id,
+          image: cardForm.image || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjI4MCIgdmlld0JveD0iMCAwIDIwMCAyODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjgwIiByeD0iMTAiIGZpbGw9IiNmM2Y0ZjYiLz4KPHN2ZyB4PSI1MCIgeT0iODAiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+CjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjMwIiBmaWxsPSIjZTVlN2ViIi8+Cjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOWNhM2FmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4/PC90ZXh0Pgo8L3N2Zz4KPC9zdmc+"
+        });
+        setCards([...cards, newCard]);
+        
+        // Update expansion in local state
+        setExpansions(expansions.map(exp => 
+          exp.id === cardForm.expansion_id
+            ? { ...exp, total_cards: exp.total_cards + 1 }
+            : exp
+        ));
+        
+        toast({
+          title: "Carta creata",
+          description: `${cardForm.name} è stata creata con successo`,
+        });
+      }
       
-      // Update expansion total cards count
-      setExpansions(expansions.map(exp => 
-        exp.id === parseInt(cardForm.expansionId)
-          ? { ...exp, totalCards: exp.totalCards + 1 }
-          : exp
-      ));
-      
+      setCardForm({ name: '', expansion_id: '', image: '' });
+    } catch (error) {
+      console.error('Error with card:', error);
       toast({
-        title: "Carta creata",
-        description: `${cardForm.name} è stata creata con successo`,
+        title: "Errore",
+        description: error.response?.data?.detail || "Errore durante l'operazione",
+        variant: "destructive",
       });
     }
-    
-    setCardForm({ name: '', expansionId: '', image: null });
   };
 
   const handleImageUpload = (e) => {
@@ -152,45 +195,73 @@ const Admin = () => {
     }
   };
 
-  const deleteExpansion = (id) => {
-    setExpansions(expansions.filter(exp => exp.id !== id));
-    setCards(cards.filter(card => card.expansionId !== id));
-    toast({
-      title: "Espansione eliminata",
-      description: "L'espansione e tutte le sue carte sono state eliminate",
-    });
-  };
-
-  const deleteCard = (id) => {
-    const card = cards.find(c => c.id === id);
-    setCards(cards.filter(c => c.id !== id));
-    
-    // Update expansion total cards count
-    if (card) {
-      setExpansions(expansions.map(exp => 
-        exp.id === card.expansionId
-          ? { ...exp, totalCards: Math.max(0, exp.totalCards - 1) }
-          : exp
-      ));
+  const deleteExpansion = async (id) => {
+    try {
+      await expansionAPI.delete(id);
+      setExpansions(expansions.filter(exp => exp.id !== id));
+      setCards(cards.filter(card => card.expansion_id !== id));
+      toast({
+        title: "Espansione eliminata",
+        description: "L'espansione e tutte le sue carte sono state eliminate",
+      });
+    } catch (error) {
+      console.error('Error deleting expansion:', error);
+      toast({
+        title: "Errore",
+        description: error.response?.data?.detail || "Errore durante l'eliminazione",
+        variant: "destructive",
+      });
     }
-    
-    toast({
-      title: "Carta eliminata",
-      description: "La carta è stata eliminata con successo",
-    });
   };
 
-  const toggleUserAdmin = (userId) => {
-    setUsers(users.map(u => 
-      u.id === userId 
-        ? { ...u, isAdmin: !u.isAdmin }
-        : u
-    ));
-    const user = users.find(u => u.id === userId);
-    toast({
-      title: `Ruolo aggiornato`,
-      description: `${user.nickname} è ora ${user.isAdmin ? 'utente normale' : 'amministratore'}`,
-    });
+  const deleteCard = async (id) => {
+    try {
+      const card = cards.find(c => c.id === id);
+      await cardAPI.delete(id);
+      setCards(cards.filter(c => c.id !== id));
+      
+      // Update expansion total cards count
+      if (card) {
+        setExpansions(expansions.map(exp => 
+          exp.id === card.expansion_id
+            ? { ...exp, total_cards: Math.max(0, exp.total_cards - 1) }
+            : exp
+        ));
+      }
+      
+      toast({
+        title: "Carta eliminata",
+        description: "La carta è stata eliminata con successo",
+      });
+    } catch (error) {
+      console.error('Error deleting card:', error);
+      toast({
+        title: "Errore",
+        description: error.response?.data?.detail || "Errore durante l'eliminazione",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleUserAdmin = async (userId) => {
+    try {
+      const user = users.find(u => u.id === userId);
+      const updated = await adminAPI.updateUserAdmin(userId, !user.is_admin);
+      setUsers(users.map(u => 
+        u.id === userId ? updated : u
+      ));
+      toast({
+        title: `Ruolo aggiornato`,
+        description: `${user.nickname} è ora ${user.is_admin ? 'utente normale' : 'amministratore'}`,
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Errore",
+        description: error.response?.data?.detail || "Errore durante l'aggiornamento",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -306,7 +377,7 @@ const Admin = () => {
                         <CardDescription className="text-white/70">{expansion.description}</CardDescription>
                       </div>
                       <Badge style={{ backgroundColor: expansion.color }} className="text-white">
-                        {cards.filter(c => c.expansionId === expansion.id).length} carte
+                        {expansion.total_cards} carte
                       </Badge>
                     </div>
                   </CardHeader>
@@ -364,13 +435,13 @@ const Admin = () => {
                   </div>
                   <div>
                     <Label htmlFor="card-expansion" className="text-white">Espansione</Label>
-                    <Select value={cardForm.expansionId.toString()} onValueChange={(value) => setCardForm({...cardForm, expansionId: value})}>
+                    <Select value={cardForm.expansion_id} onValueChange={(value) => setCardForm({...cardForm, expansion_id: value})}>
                       <SelectTrigger className="bg-white/10 border-white/20 text-white">
                         <SelectValue placeholder="Seleziona espansione" />
                       </SelectTrigger>
                       <SelectContent>
                         {expansions.map((expansion) => (
-                          <SelectItem key={expansion.id} value={expansion.id.toString()}>
+                          <SelectItem key={expansion.id} value={expansion.id}>
                             {expansion.name}
                           </SelectItem>
                         ))}
@@ -382,7 +453,7 @@ const Admin = () => {
                     <Input
                       id="card-image"
                       type="file"
-                      accept="image/jpeg"
+                      accept="image/jpeg,image/jpg,image/png"
                       onChange={handleImageUpload}
                       className="bg-white/10 border-white/20 text-white"
                     />
@@ -402,7 +473,7 @@ const Admin = () => {
                         variant="outline"
                         onClick={() => {
                           setEditingCard(null);
-                          setCardForm({ name: '', expansionId: '', image: null });
+                          setCardForm({ name: '', expansion_id: '', image: '' });
                         }}
                         className="border-white/30 text-white hover:bg-white/10"
                       >
@@ -416,7 +487,7 @@ const Admin = () => {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {cards.map((card) => {
-                const expansion = expansions.find(e => e.id === card.expansionId);
+                const expansion = expansions.find(e => e.id === card.expansion_id);
                 return (
                   <Card key={card.id} className="bg-black/20 border-white/10 backdrop-blur-sm">
                     <CardContent className="p-4">
@@ -438,7 +509,7 @@ const Admin = () => {
                             setEditingCard(card);
                             setCardForm({
                               name: card.name,
-                              expansionId: card.expansionId.toString(),
+                              expansion_id: card.expansion_id,
                               image: card.image
                             });
                           }}
@@ -480,19 +551,19 @@ const Admin = () => {
                         <p className="text-white/70 text-sm">{user.email}</p>
                       </div>
                       <div className="flex items-center space-x-4">
-                        <Badge variant={user.isAdmin ? "destructive" : "secondary"}>
-                          {user.isAdmin ? "Admin" : "Utente"}
+                        <Badge variant={user.is_admin ? "destructive" : "secondary"}>
+                          {user.is_admin ? "Admin" : "Utente"}
                         </Badge>
                         <Button
                           size="sm"
-                          variant={user.isAdmin ? "outline" : "default"}
+                          variant={user.is_admin ? "outline" : "default"}
                           onClick={() => toggleUserAdmin(user.id)}
-                          className={user.isAdmin 
+                          className={user.is_admin 
                             ? "border-white/30 text-white hover:bg-white/10" 
                             : "bg-gradient-to-r from-red-500 to-pink-600"
                           }
                         >
-                          {user.isAdmin ? "Rimuovi Admin" : "Rendi Admin"}
+                          {user.is_admin ? "Rimuovi Admin" : "Rendi Admin"}
                         </Button>
                       </div>
                     </div>
