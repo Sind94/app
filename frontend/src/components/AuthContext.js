@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getLocalUserData, clearLocalUserData } from '../mock/mockData';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -16,63 +16,59 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulazione del controllo di autenticazione esistente
-    const checkAuth = () => {
-      const savedUser = localStorage.getItem('slowlycard_auth');
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        // Aggiungi isAdmin se l'email è quella dell'admin
-        if (userData.email === 'admin@example.com') {
-          userData.isAdmin = true;
+    const checkAuth = async () => {
+      try {
+        const token = localStorage.getItem('slowlycard_token');
+        if (token) {
+          const userData = await authAPI.getCurrentUser();
+          setUser(userData);
         }
-        setUser(userData);
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('slowlycard_token');
+        localStorage.removeItem('slowlycard_auth');
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkAuth();
   }, []);
 
   const login = async (email, password) => {
-    // Simulazione login
-    if (email && password) {
-      const userData = getLocalUserData();
-      const authData = { ...userData, email };
-      
-      // Imposta isAdmin se è l'email dell'admin
-      if (email === 'admin@example.com') {
-        authData.isAdmin = true;
-      }
-      
-      setUser(authData);
-      localStorage.setItem('slowlycard_auth', JSON.stringify(authData));
+    try {
+      const response = await authAPI.login(email, password);
+      localStorage.setItem('slowlycard_token', response.access_token);
+      localStorage.setItem('slowlycard_auth', JSON.stringify(response.user));
+      setUser(response.user);
       return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Errore durante il login' 
+      };
     }
-    return { success: false, error: 'Email e password richiesti' };
   };
 
   const register = async (email, nickname, password) => {
-    // Simulazione registrazione
-    if (email && nickname && password) {
-      const userData = {
-        id: Date.now(),
-        email,
-        nickname,
-        foundCards: [],
-        isAdmin: email === 'admin@example.com' // Imposta admin se è l'email speciale
-      };
-      setUser(userData);
-      localStorage.setItem('slowlycard_auth', JSON.stringify(userData));
-      localStorage.setItem('slowlycard_user', JSON.stringify(userData));
+    try {
+      const response = await authAPI.register(email, nickname, password);
+      localStorage.setItem('slowlycard_token', response.access_token);
+      localStorage.setItem('slowlycard_auth', JSON.stringify(response.user));
+      setUser(response.user);
       return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.response?.data?.detail || 'Errore durante la registrazione' 
+      };
     }
-    return { success: false, error: 'Tutti i campi sono richiesti' };
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('slowlycard_token');
     localStorage.removeItem('slowlycard_auth');
-    clearLocalUserData();
   };
 
   const value = {

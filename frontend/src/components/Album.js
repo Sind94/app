@@ -5,34 +5,59 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { useNavigate } from 'react-router-dom';
-import { mockExpansions, mockCards, getLocalUserData } from '../mock/mockData';
+import { expansionAPI, cardAPI } from '../services/api';
+import AdminButton from './AdminButton';
 
 const Album = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [selectedExpansion, setSelectedExpansion] = useState(null);
-  const [userFoundCards, setUserFoundCards] = useState([]);
+  const [expansions, setExpansions] = useState([]);
+  const [cards, setCards] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = getLocalUserData();
-    setUserFoundCards(userData.foundCards || []);
+    const fetchData = async () => {
+      try {
+        const [expansionsData, cardsData] = await Promise.all([
+          expansionAPI.getAll(),
+          cardAPI.getAll()
+        ]);
+        setExpansions(expansionsData);
+        setCards(cardsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const getFoundCardsForExpansion = (expansionId) => {
-    return mockCards.filter(card => 
-      card.expansionId === expansionId && userFoundCards.includes(card.id)
+    return cards.filter(card => 
+      card.expansion_id === expansionId && user?.found_cards?.includes(card.id)
     );
   };
 
   const getCompletionPercentage = (expansionId) => {
-    const totalCards = mockCards.filter(card => card.expansionId === expansionId).length;
+    const totalCards = cards.filter(card => card.expansion_id === expansionId).length;
     const foundCards = getFoundCardsForExpansion(expansionId).length;
     return totalCards > 0 ? Math.round((foundCards / totalCards) * 100) : 0;
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+        <div className="animate-spin w-12 h-12 border-4 border-white/20 border-t-white rounded-full"></div>
+      </div>
+    );
+  }
+
   if (selectedExpansion) {
     const foundCards = getFoundCardsForExpansion(selectedExpansion.id);
-    const allExpansionCards = mockCards.filter(card => card.expansionId === selectedExpansion.id);
+    const allExpansionCards = cards.filter(card => card.expansion_id === selectedExpansion.id);
     
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
@@ -50,13 +75,16 @@ const Album = () => {
                 {selectedExpansion.name}
               </h1>
             </div>
-            <Button 
-              onClick={() => navigate('/')}
-              variant="outline"
-              className="border-white/30 text-white hover:bg-white/10"
-            >
-              Home
-            </Button>
+            <div className="flex items-center space-x-2">
+              <AdminButton />
+              <Button 
+                onClick={() => navigate('/')}
+                variant="outline"
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                Home
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -81,7 +109,7 @@ const Album = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {allExpansionCards.map((card) => {
-              const isFound = userFoundCards.includes(card.id);
+              const isFound = user?.found_cards?.includes(card.id);
               return (
                 <Card 
                   key={card.id}
@@ -135,7 +163,8 @@ const Album = () => {
               {user?.nickname}
             </Badge>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <AdminButton />
             <Button 
               onClick={() => navigate('/')}
               variant="outline"
@@ -165,9 +194,9 @@ const Album = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {mockExpansions.map((expansion) => {
+          {expansions.map((expansion) => {
             const foundCount = getFoundCardsForExpansion(expansion.id).length;
-            const totalCount = mockCards.filter(card => card.expansionId === expansion.id).length;
+            const totalCount = cards.filter(card => card.expansion_id === expansion.id).length;
             const completionPercentage = getCompletionPercentage(expansion.id);
 
             return (
@@ -181,11 +210,17 @@ const Album = () => {
                     className="w-24 h-32 mx-auto mb-4 rounded-lg overflow-hidden transform transition-all duration-300 group-hover:rotate-3"
                     style={{ backgroundColor: expansion.color }}
                   >
-                    <img 
-                      src={expansion.image} 
-                      alt={expansion.name}
-                      className="w-full h-full object-cover"
-                    />
+                    {expansion.image ? (
+                      <img 
+                        src={expansion.image} 
+                        alt={expansion.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white text-2xl">
+                        📚
+                      </div>
+                    )}
                   </div>
                   <CardTitle className="text-xl text-white mb-2">
                     {expansion.name}
@@ -228,16 +263,16 @@ const Album = () => {
             <CardContent>
               <div className="grid grid-cols-3 gap-6 text-center">
                 <div>
-                  <p className="text-3xl font-bold text-yellow-400">{userFoundCards.length}</p>
+                  <p className="text-3xl font-bold text-yellow-400">{user?.found_cards?.length || 0}</p>
                   <p className="text-white/70">Carte Totali</p>
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-green-400">{mockExpansions.length}</p>
+                  <p className="text-3xl font-bold text-green-400">{expansions.length}</p>
                   <p className="text-white/70">Espansioni</p>
                 </div>
                 <div>
                   <p className="text-3xl font-bold text-blue-400">
-                    {Math.round((userFoundCards.length / mockCards.length) * 100)}%
+                    {cards.length > 0 ? Math.round(((user?.found_cards?.length || 0) / cards.length) * 100) : 0}%
                   </p>
                   <p className="text-white/70">Completamento</p>
                 </div>
