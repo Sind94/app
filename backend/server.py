@@ -9,8 +9,14 @@ from pathlib import Path
 from typing import List
 import random
 from datetime import timedelta
+import sys
+
+# Add current directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import our models and auth
+import models
+import auth
 from models import (
     User, UserCreate, UserLogin, UserResponse, LoginResponse,
     Expansion, ExpansionCreate, ExpansionUpdate,
