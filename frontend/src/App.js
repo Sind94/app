@@ -7,6 +7,7 @@ import Auth from "./components/Auth";
 import Home from "./components/Home";
 import Album from "./components/Album";
 import Spacchetta from "./components/Spacchetta";
+import Admin from "./components/Admin";
 
 const ProtectedRoute = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -52,6 +53,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <Spacchetta />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute>
+            <Admin />
           </ProtectedRoute>
         } 
       />
