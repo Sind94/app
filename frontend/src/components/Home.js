@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { useNavigate } from 'react-router-dom';
+import AdminButton from './AdminButton';
 
 const Home = () => {
   const { user, logout } = useAuth();
@@ -22,13 +23,16 @@ const Home = () => {
               Benvenuto, {user?.nickname}!
             </Badge>
           </div>
-          <Button 
-            onClick={logout}
-            variant="outline"
-            className="border-white/30 text-white hover:bg-white/10 transition-all duration-200"
-          >
-            Logout
-          </Button>
+          <div className="flex items-center space-x-2">
+            <AdminButton />
+            <Button 
+              onClick={logout}
+              variant="outline"
+              className="border-white/30 text-white hover:bg-white/10 transition-all duration-200"
+            >
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
