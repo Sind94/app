@@ -6,7 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
-from .models import User, UserResponse
+from models import User, UserResponse
 
 # Configuration
 SECRET_KEY = os.environ.get("SECRET_KEY", "your-secret-key-change-in-production")
