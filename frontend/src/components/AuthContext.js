@@ -20,7 +20,12 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = () => {
       const savedUser = localStorage.getItem('slowlycard_auth');
       if (savedUser) {
-        setUser(JSON.parse(savedUser));
+        const userData = JSON.parse(savedUser);
+        // Aggiungi isAdmin se l'email è quella dell'admin
+        if (userData.email === 'admin@example.com') {
+          userData.isAdmin = true;
+        }
+        setUser(userData);
       }
       setIsLoading(false);
     };
@@ -33,6 +38,12 @@ export const AuthProvider = ({ children }) => {
     if (email && password) {
       const userData = getLocalUserData();
       const authData = { ...userData, email };
+      
+      // Imposta isAdmin se è l'email dell'admin
+      if (email === 'admin@example.com') {
+        authData.isAdmin = true;
+      }
+      
       setUser(authData);
       localStorage.setItem('slowlycard_auth', JSON.stringify(authData));
       return { success: true };
@@ -47,7 +58,8 @@ export const AuthProvider = ({ children }) => {
         id: Date.now(),
         email,
         nickname,
-        foundCards: []
+        foundCards: [],
+        isAdmin: email === 'admin@example.com' // Imposta admin se è l'email speciale
       };
       setUser(userData);
       localStorage.setItem('slowlycard_auth', JSON.stringify(userData));
