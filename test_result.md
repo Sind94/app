@@ -101,3 +101,215 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Test completo del backend SlowlyCard API. Devo testare tutti gli endpoint: Autenticazione, Espansioni, Carte, Pacchetti, Admin, Health check."
+
+backend:
+  - task: "Health Check Endpoint"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Health check endpoint is working correctly. Returns status 'healthy' and service name."
+
+  - task: "User Registration"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "User registration endpoint is working correctly. Successfully registered both admin and regular users."
+
+  - task: "User Login"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "User login endpoint is working correctly. Successfully authenticated users and received valid tokens."
+
+  - task: "Get Current User Info"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Current user info endpoint is working correctly. Returns proper user data when authenticated."
+
+  - task: "List Expansions"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "List expansions endpoint is working correctly. Returns empty array initially and populated array after creating expansions."
+
+  - task: "Create Expansion"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Create expansion endpoint is working correctly. Admin can successfully create new expansions."
+
+  - task: "Update Expansion"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Update expansion endpoint is working correctly. Admin can successfully update existing expansions."
+
+  - task: "Delete Expansion"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Delete expansion endpoint is working correctly. Admin can successfully delete expansions and their associated cards."
+
+  - task: "List Cards"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "List cards endpoint is working correctly. Returns all cards or filtered by expansion_id."
+
+  - task: "Create Card"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Create card endpoint is working correctly. Admin can successfully create new cards and they're associated with the correct expansion."
+
+  - task: "Update Card"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Update card endpoint is working correctly. Admin can successfully update existing cards."
+
+  - task: "Delete Card"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Delete card endpoint is working correctly. Admin can successfully delete cards and expansion card count is updated."
+
+  - task: "Open Pack"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Open pack endpoint is working correctly. Users can open packs and receive cards from the specified expansion. Found cards are tracked correctly."
+
+  - task: "List Users (Admin)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "List users endpoint is working correctly. Admin can view all registered users."
+
+  - task: "Update User Admin Status"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Update user admin status endpoint is working correctly. Admin can promote/demote other users."
+
+  - task: "Authentication and Authorization"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Authentication and authorization are working correctly. Protected endpoints require authentication, and admin endpoints require admin privileges. Minor issue: Unauthorized requests return 403 instead of 401 for some endpoints, but this doesn't affect functionality."
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "All backend endpoints"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "testing"
+    message: "Completed comprehensive testing of all backend endpoints. All endpoints are functioning correctly. Created a backend_test.py script that tests all endpoints including positive and negative scenarios. All tests passed successfully with only minor issues in error status codes (403 vs 401) that don't affect functionality."
